@@ -154,8 +154,9 @@ public:
     double weight_dynamic_obstacle_inflation; //!< Optimization weight for the inflation penalty of dynamic obstacles (should be small)
     double weight_viapoint; //!< Optimization weight for minimizing the distance to via-points
     double weight_prefer_rotdir; //!< Optimization weight for preferring a specific turning direction (-> currently only activated if an oscillation is detected, see 'oscillation_recovery'
-    
     double weight_adapt_factor; //!< Some special weights (currently 'weight_obstacle') are repeatedly scaled by this factor in each outer TEB iteration (weight_new = weight_old*factor); Increasing weights iteratively instead of setting a huge value a-priori leads to better numerical conditions of the underlying optimization problem.
+    double weight_follower_vel_x; //!< Optimization weight for adapting to the follower translation velocity in x
+    double weight_follower_vel_theta; //!< Optimization weight for adapting to the follower rotation yaw
   } optim; //!< Optimization related parameters
   
   
@@ -295,6 +296,8 @@ public:
     optim.weight_prefer_rotdir = 50;
     
     optim.weight_adapt_factor = 2.0;
+    optim.weight_follower_vel_x = 50;
+    optim.weight_follower_vel_theta = 25;
     
     // Homotopy Class Planner
    

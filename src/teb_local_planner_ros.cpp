@@ -164,6 +164,9 @@ void TebLocalPlannerROS::initialize(std::string name, tf::TransformListener* tf,
         
     // setup callback for custom obstacles
     custom_obst_sub_ = nh.subscribe("obstacles", 1, &TebLocalPlannerROS::customObstacleCB, this);
+
+    // setup callback for the tracked person
+    tracked_people_sub_ = nh.subscribe("/spencer/perception/tracked_persons", 1, &TebLocalPlannerROS::trackedPersonCB, this);
     
     // initialize failure detector
     ros::NodeHandle nh_move_base("~");
@@ -573,7 +576,11 @@ void TebLocalPlannerROS::updateViaPointsContainer(const std::vector<geometry_msg
     via_points_.push_back( Eigen::Vector2d( transformed_plan[i].pose.position.x, transformed_plan[i].pose.position.y ) );
     prev_idx = i;
   }
-  
+}
+
+void TebLocalPlannerROS::updateFollowerVelocity()
+{
+  boost::mutex::scoped_lock l(tracked_person_mutex_);
 }
       
 Eigen::Vector2d TebLocalPlannerROS::tfPoseToEigenVector2dTransRot(const tf::Pose& tf_vel)
@@ -942,6 +949,15 @@ void TebLocalPlannerROS::customObstacleCB(const costmap_converter::ObstacleArray
 {
   boost::mutex::scoped_lock l(custom_obst_mutex_);
   custom_obstacle_msg_ = *obst_msg;  
+}
+
+void TebLocalPlannerROS::trackedPersonCB(const spencer_tracking_msgs::TrackedPersons::ConstPtr &_msg)
+{
+  if(_msg->tracks.size() == 0){
+    return;
+  }
+  boost::mutex::scoped_lock l(tracked_person_mutex_);
+  follower_vel_ = _msg->tracks.front().twist.twist;
 }
      
 RobotFootprintModelPtr TebLocalPlannerROS::getRobotFootprintFromParamServer(const ros::NodeHandle& nh)

@@ -68,6 +68,7 @@
 #include <teb_local_planner/g2o_types/edge_dynamic_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_via_point.h>
 #include <teb_local_planner/g2o_types/edge_prefer_rotdir.h>
+#include <teb_local_planner/g2o_types/edge_follower_velocity.h>
 
 // messages
 #include <nav_msgs/Path.h>
@@ -587,6 +588,14 @@ protected:
    * @see optimizeGraph
    */
   void AddEdgesVelocity();
+
+  /**
+   * @brief Add all edges (local cost functions) limited by the speed of the follower.
+   * @see EdgeFollowerVelocity
+   * @see buildGraph
+   * @see optimizeGraph
+   */
+  void AddEdgesFollowerVelocity();
   
   /**
    * @brief Add all edges (local cost functions) for limiting the translational and angular acceleration.

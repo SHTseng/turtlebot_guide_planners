@@ -61,6 +61,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <costmap_converter/ObstacleMsg.h>
+#include <spencer_tracking_msgs/TrackedPersons.h>
 
 // transforms
 #include <tf/tf.h>
@@ -215,6 +216,13 @@ protected:
    * @param min_separation minimum separation between two consecutive via-points
    */
   void updateViaPointsContainer(const std::vector<geometry_msgs::PoseStamped>& transformed_plan, double min_separation);
+
+
+  /**
+   * @brief Update internal via-point container based on the current reference plan
+   * @remarks All previous via-points will be cleared.
+   */
+  void updateFollowerVelocity();
   
   
   /**
@@ -232,6 +240,12 @@ protected:
     * @param obst_msg pointer to the message containing a list of polygon shaped obstacles
     */
   void customObstacleCB(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst_msg);
+
+  /**
+   * @brief Callback for updating the follower state
+   * @param _msg pointer to the message containing tracked people
+   */
+  void trackedPersonCB(const spencer_tracking_msgs::TrackedPersons::ConstPtr& _msg);
   
   
    /**
@@ -371,6 +385,10 @@ private:
   ros::Subscriber custom_obst_sub_; //!< Subscriber for custom obstacles received via a ObstacleMsg.
   boost::mutex custom_obst_mutex_; //!< Mutex that locks the obstacle array (multi-threaded)
   costmap_converter::ObstacleArrayMsg custom_obstacle_msg_; //!< Copy of the most recent obstacle message
+
+  ros::Subscriber tracked_people_sub_; //! Subscruber for the tracked people topic
+  geometry_msgs::Twist follower_vel_; //! tracked follower speed
+  boost::mutex tracked_person_mutex_; //! Mutex for locking the speed of the follower
   
   PoseSE2 robot_pose_; //!< Store current robot pose
   PoseSE2 robot_goal_; //!< Store current robot goal

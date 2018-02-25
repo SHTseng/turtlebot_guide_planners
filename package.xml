@@ -43,6 +43,7 @@
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>visualization_msgs</depend>
+  <depend>spencer_tracking_msgs</depend>
 
   <export>
     <nav_core plugin="${prefix}/teb_local_planner_plugin.xml"/>

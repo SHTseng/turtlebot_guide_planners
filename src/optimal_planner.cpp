@@ -137,6 +137,9 @@ void TebOptimalPlanner::registerG2OTypes()
   factory->registerType("EDGE_DYNAMIC_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeDynamicObstacle>);
   factory->registerType("EDGE_VIA_POINT", new g2o::HyperGraphElementCreator<EdgeViaPoint>);
   factory->registerType("EDGE_PREFER_ROTDIR", new g2o::HyperGraphElementCreator<EdgePreferRotDir>);
+
+  // Newly add constraint
+  factory->registerType("EDGE_FOLLOWER_VELOCITY", new g2o::HyperGraphElementCreator<EdgeFollowerVelocity>);
   return;
 }
 
@@ -745,6 +748,30 @@ void TebOptimalPlanner::AddEdgesVelocity()
       optimizer_->addEdge(velocity_edge);
     } 
     
+  }
+}
+
+void TebOptimalPlanner::AddEdgesFollowerVelocity()
+{
+  if ( cfg_->optim.weight_max_vel_x==0 && cfg_->optim.weight_max_vel_theta==0)
+    return; // if weight equals zero skip adding edges!
+
+  int n = teb_.sizePoses();
+  Eigen::Matrix<double,2,2> information;
+  information(0,0) = cfg_->optim.weight_follower_vel_x;
+  information(1,1) = cfg_->optim.weight_follower_vel_theta;
+  information(0,1) = 0.0;
+  information(1,0) = 0.0;
+
+  for (int i=0; i < n - 1; ++i)
+  {
+    EdgeFollowerVelocity* follower_velocity_edge = new EdgeFollowerVelocity;
+    follower_velocity_edge->setVertex(0, teb_.PoseVertex(i));
+    follower_velocity_edge->setVertex(1, teb_.PoseVertex(i+1));
+    follower_velocity_edge->setVertex(2, teb_.TimeDiffVertex(i));
+    follower_velocity_edge->setInformation(information);
+    follower_velocity_edge->setTebConfig(*cfg_);
+    optimizer_->addEdge(follower_velocity_edge);
   }
 }
 

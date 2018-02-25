@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   visualization_msgs
+  spencer_tracking_msgs
 )
 message(STATUS "System: ${CMAKE_SYSTEM}")
 ## System dependencies are found with CMake's conventions
@@ -159,6 +160,7 @@ catkin_package(
 	tf
 	tf_conversions
 	visualization_msgs
+        spencer_tracking_msgs
   DEPENDS SUITESPARSE G2O
 )
 
