@@ -106,7 +106,7 @@ void TebLocalPlannerROS::initialize(std::string name, tf::TransformListener* tf,
     }
     else
     {
-      planner_ = PlannerInterfacePtr(new TebOptimalPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_));
+      planner_ = PlannerInterfacePtr(new TebOptimalPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_, &follower_vel_));
       ROS_INFO("Parallel planning in distinctive topologies disabled.");
     }
     
@@ -400,6 +400,8 @@ bool TebLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   visualization_->publishObstacles(obstacles_);
   visualization_->publishViaPoints(via_points_);
   visualization_->publishGlobalPlan(global_plan_);
+
+//  ROS_INFO_STREAM(follower_vel_.linear.x << " " << follower_vel_.linear.y << " " << follower_vel_.angular.z);
   return true;
 }
 

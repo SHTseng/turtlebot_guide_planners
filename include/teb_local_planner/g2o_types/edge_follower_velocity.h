@@ -7,7 +7,7 @@
 #include <teb_local_planner/g2o_types/penalties.h>
 #include <teb_local_planner/teb_config.h>
 
-#include <iostream>
+#include <geometry_msgs/Twist.h>
 
 namespace teb_local_planner
 {
@@ -62,20 +62,29 @@ public:
     double vel = dist / deltaT->estimate();
 
 //     vel *= g2o::sign(deltaS[0]*cos(conf1->theta()) + deltaS[1]*sin(conf1->theta())); // consider direction
-    vel *= fast_sigmoid( 100 * (deltaS.x()*cos(conf1->theta()) + deltaS.y()*sin(conf1->theta())) ); // consider direction
+//    vel *= fast_sigmoid( 100 * (deltaS.x()*cos(conf1->theta()) + deltaS.y()*sin(conf1->theta())) ); // consider direction
 
     const double omega = angle_diff / deltaT->estimate();
 
-    _error[0] = penaltyBoundToInterval(vel, -cfg_->robot.max_vel_x_backwards, cfg_->robot.max_vel_x,cfg_->optim.penalty_epsilon);
-    _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta,cfg_->optim.penalty_epsilon);
+    _error[0] = penaltyBoundToInterval(vel, follower_pose_.position().norm(), cfg_->optim.penalty_epsilon);
+    _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta, cfg_->optim.penalty_epsilon);
 
     ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeVelocity::computeError() _error[0]=%f _error[1]=%f\n",_error[0],_error[1]);
   }
 
+  void setFollowerVelocity(const geometry_msgs::Twist& follower_vel)
+  {
+    follower_pose_.position() << follower_vel.linear.x, follower_vel.linear.y;
+    follower_pose_.theta() = follower_vel.angular.z;
+    ROS_INFO_STREAM(follower_vel.linear.x << " " << follower_vel.linear.y);
+  }
+
+protected:
+
+  PoseSE2 follower_pose_;
+
 public:
-
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
 };
 
 } // namespace
