@@ -53,7 +53,7 @@ TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_point
   
 TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles,
                                      RobotFootprintModelPtr robot_model, TebVisualizationPtr visual,
-                                     const ViaPointContainer* via_points, const geometry_msgs::Twist *follower_vel)
+                                     const ViaPointContainer* via_points, geometry_msgs::Twist *follower_vel)
 {    
   initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel);
 }
@@ -69,7 +69,7 @@ TebOptimalPlanner::~TebOptimalPlanner()
 }
 
 void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, const geometry_msgs::Twist* follower_vel)
+                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, geometry_msgs::Twist* follower_vel)
 {    
   // init optimizer (set solver and block ordering settings)
   optimizer_ = initOptimizer();
@@ -762,8 +762,15 @@ void TebOptimalPlanner::AddEdgesVelocity()
 
 void TebOptimalPlanner::AddEdgesFollowerVelocity()
 {
-  if ( cfg_->optim.weight_max_vel_x==0 && cfg_->optim.weight_max_vel_theta==0)
-    return; // if weight equals zero skip adding edges!
+  //! First, check the follower velocity is coming or not, if NULL must return or the process crash
+  //! Then, check the value of follower speed. The tracking system publish non-processed value at first few runs
+  if (follower_vel_ == NULL)
+    return;
+  else
+  {
+    if(follower_vel_->linear.x < 0.01)
+      return;
+  }
 
   int n = teb_.sizePoses();
   Eigen::Matrix<double,2,2> information;
@@ -772,6 +779,7 @@ void TebOptimalPlanner::AddEdgesFollowerVelocity()
   information(0,1) = 0.0;
   information(1,0) = 0.0;
 
+  ROS_INFO_STREAM(follower_vel_->linear.x << " " << follower_vel_->linear.y);
   for (int i=0; i < n - 1; ++i)
   {
     EdgeFollowerVelocity* follower_velocity_edge = new EdgeFollowerVelocity;
