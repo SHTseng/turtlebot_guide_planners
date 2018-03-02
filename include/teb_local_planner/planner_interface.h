@@ -141,6 +141,8 @@ public:
    */
   virtual void clearPlanner() = 0;
   
+
+  virtual void setTrackingState(const bool track) = 0;
   /**
    * @brief Prefer a desired initial turning direction (by penalizing the opposing one)
    * 

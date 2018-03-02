@@ -64,7 +64,7 @@ namespace teb_local_planner
 TebLocalPlannerROS::TebLocalPlannerROS() : costmap_ros_(NULL), tf_(NULL), costmap_model_(NULL),
                                            costmap_converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"),
                                            dynamic_recfg_(NULL), goal_reached_(false), no_infeasible_plans_(0), last_preferred_rotdir_(RotType::none),
-                                           initialized_(false)
+                                           initialized_(false), follower_tracked_(false)
 {
 }
 
@@ -101,12 +101,14 @@ void TebLocalPlannerROS::initialize(std::string name, tf::TransformListener* tf,
     // create the planner instance
     if (cfg_.hcp.enable_homotopy_class_planning)
     {
-      planner_ = PlannerInterfacePtr(new HomotopyClassPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_));
+      planner_ = PlannerInterfacePtr(new HomotopyClassPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_,
+                                                              &follower_vel_));
       ROS_INFO("Parallel planning in distinctive topologies enabled.");
     }
     else
     {
-      planner_ = PlannerInterfacePtr(new TebOptimalPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_, &follower_vel_));
+      planner_ = PlannerInterfacePtr(new TebOptimalPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_,
+                                                           &follower_vel_));
       ROS_INFO("Parallel planning in distinctive topologies disabled.");
     }
     
@@ -313,11 +315,16 @@ bool TebLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   
   // update via-points container
   updateViaPointsContainer(transformed_plan, cfg_.trajectory.global_plan_viapoint_sep);
+
+  // update the information of the follower
+  updateFollowerVelocity();
     
   // Do not allow config changes during the following optimization step
   boost::mutex::scoped_lock cfg_lock(cfg_.configMutex());
-    
+
   // Now perform the actual planning
+  planner_->setTrackingState(follower_tracked_);
+
 //   bool success = planner_->plan(robot_pose_, robot_goal_, robot_vel_, cfg_.goal_tolerance.free_goal_vel); // straight line init
   bool success = planner_->plan(transformed_plan, &robot_vel_, cfg_.goal_tolerance.free_goal_vel);
   if (!success)
@@ -401,7 +408,6 @@ bool TebLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   visualization_->publishViaPoints(via_points_);
   visualization_->publishGlobalPlan(global_plan_);
 
-//  ROS_INFO_STREAM(follower_vel_.linear.x << " " << follower_vel_.linear.y << " " << follower_vel_.angular.z);
   return true;
 }
 
@@ -583,6 +589,17 @@ void TebLocalPlannerROS::updateViaPointsContainer(const std::vector<geometry_msg
 void TebLocalPlannerROS::updateFollowerVelocity()
 {
   boost::mutex::scoped_lock l(tracked_person_mutex_);
+  for ( auto it  = tracked_persons_msg_.tracks.begin(); it != tracked_persons_msg_.tracks.end(); it++)
+  {
+    if (it->track_id == 0)
+    {
+      follower_vel_.position().coeffRef(0) = it->twist.twist.linear.x;
+      follower_vel_.position().coeffRef(1) = it->twist.twist.linear.y;
+      follower_vel_.theta() = it->twist.twist.angular.z;
+      follower_tracked_ = true;
+      break;
+    }
+  }
 }
       
 Eigen::Vector2d TebLocalPlannerROS::tfPoseToEigenVector2dTransRot(const tf::Pose& tf_vel)
@@ -955,11 +972,8 @@ void TebLocalPlannerROS::customObstacleCB(const costmap_converter::ObstacleArray
 
 void TebLocalPlannerROS::trackedPersonCB(const spencer_tracking_msgs::TrackedPersons::ConstPtr &_msg)
 {
-  if(_msg->tracks.size() == 0){
-    return;
-  }
   boost::mutex::scoped_lock l(tracked_person_mutex_);
-  follower_vel_ = _msg->tracks.front().twist.twist;
+  tracked_persons_msg_ = *_msg;
 }
      
 RobotFootprintModelPtr TebLocalPlannerROS::getRobotFootprintFromParamServer(const ros::NodeHandle& nh)
@@ -999,7 +1013,7 @@ RobotFootprintModelPtr TebLocalPlannerROS::getRobotFootprintFromParamServer(cons
     // check parameters
     if (!nh.hasParam("footprint_model/line_start") || !nh.hasParam("footprint_model/line_end"))
     {
-      ROS_ERROR_STREAM("Footprint model 'line' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace() 
+      ROS_ERROR_STREAM("Footprint model 'line' cannot be loaded for trajectory optimization, since param '" << nh.getNamespace()
                        << "/footprint_model/line_start' and/or '.../line_end' do not exist. Using point-model instead.");
       return boost::make_shared<PointRobotFootprint>();
     }

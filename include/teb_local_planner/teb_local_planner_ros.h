@@ -387,8 +387,10 @@ private:
   costmap_converter::ObstacleArrayMsg custom_obstacle_msg_; //!< Copy of the most recent obstacle message
 
   ros::Subscriber tracked_people_sub_; //! Subscruber for the tracked people topic
-  geometry_msgs::Twist follower_vel_; //! tracked follower speed
+  spencer_tracking_msgs::TrackedPersons tracked_persons_msg_; //! Follower velocity message
   boost::mutex tracked_person_mutex_; //! Mutex for locking the speed of the follower
+  PoseSE2 follower_vel_; //! Container for storing the se2 velocity of the follower and pass as reference to optimal planner
+  bool follower_tracked_;
   
   PoseSE2 robot_pose_; //!< Store current robot pose
   PoseSE2 robot_goal_; //!< Store current robot goal

@@ -124,7 +124,8 @@ public:
    * @param via_points Container storing via-points (optional)
    */
   HomotopyClassPlanner(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                       TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL);
+                       TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL,
+                       const PoseSE2* follower_vel = NULL);
 
   /**
    * @brief Destruct the HomotopyClassPlanner.
@@ -140,7 +141,7 @@ public:
    * @param via_points Container storing via-points (optional)
    */
   void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                  TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL);
+                  TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
 
 
 
@@ -466,6 +467,7 @@ public:
    */
   const EquivalenceClassContainer& getEquivalenceClassRef() const  {return equivalence_classes_;}
 
+  virtual void setTrackingState(const bool track) { follower_locked_ = track; }
 
 protected:
 
@@ -513,6 +515,7 @@ protected:
   TebVisualizationPtr visualization_; //!< Instance of the visualization class (local/global plan, obstacles, ...)
   TebOptimalPlannerPtr best_teb_; //!< Store the current best teb.
   RobotFootprintModelPtr robot_model_; //!< Robot model shared instance
+  const PoseSE2* follower_vel_;
 
   const std::vector<geometry_msgs::PoseStamped>* initial_plan_; //!< Store the initial plan if available for a better trajectory initialization
   EquivalenceClassPtr initial_plan_eq_class_; //!< Store the equivalence class of the initial plan
@@ -526,7 +529,7 @@ protected:
   boost::shared_ptr<GraphSearchInterface> graph_search_;
 
   bool initialized_; //!< Keeps track about the correct initialization of this class
-
+  bool follower_locked_; //! Make sure the tracking system has tracked the follower
 
 
 public:

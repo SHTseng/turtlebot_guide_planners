@@ -126,7 +126,7 @@ public:
    * @param via_points Container storing via-points (optional)
    */
   TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                    TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, geometry_msgs::Twist *follower_vel = NULL);
+                    TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
   
   /**
    * @brief Destruct the optimal planner.
@@ -142,7 +142,7 @@ public:
     * @param via_points Container storing via-points (optional)
     */
   void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                  TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, geometry_msgs::Twist *follower_vel = NULL);
+                  TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
   
   
 
@@ -337,7 +337,11 @@ public:
   
   
   /** @name Utility methods and more */
-  //@{
+
+  virtual void setTrackingState(const bool track)
+  {
+    follower_locked_ = track;
+  }
         
   /**
    * @brief Reset the planner by clearing the internal graph and trajectory.
@@ -694,8 +698,7 @@ protected:
   const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
   ObstContainer* obstacles_; //!< Store obstacles that are relevant for planning
   const ViaPointContainer* via_points_; //!< Store via points for planning
-  geometry_msgs::Twist* follower_vel_;
-  
+
   double cost_; //!< Store cost value of the current hyper-graph
   RotType prefer_rotdir_; //!< Store whether to prefer a specific initial rotation in optimization (might be activated in case the robot oscillates)
   
@@ -706,9 +709,11 @@ protected:
   boost::shared_ptr<g2o::SparseOptimizer> optimizer_; //!< g2o optimizer for trajectory optimization
   std::pair<bool, geometry_msgs::Twist> vel_start_; //!< Store the initial velocity at the start pose
   std::pair<bool, geometry_msgs::Twist> vel_goal_; //!< Store the final velocity at the goal pose
+  const PoseSE2* follower_vel_;
 
   bool initialized_; //!< Keeps track about the correct initialization of this class
   bool optimized_; //!< This variable is \c true as long as the last optimization has been completed successful
+  bool follower_locked_; //! Make sure the tracking system has tracked the follower
   
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW    

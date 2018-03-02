@@ -47,13 +47,14 @@ namespace teb_local_planner
 // ============== Implementation ===================
 
 TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
-                                         robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false)
+                                         robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false),
+                                         follower_vel_(new PoseSE2()), follower_locked_(false)
 {    
 }
   
 TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles,
                                      RobotFootprintModelPtr robot_model, TebVisualizationPtr visual,
-                                     const ViaPointContainer* via_points, geometry_msgs::Twist *follower_vel)
+                                     const ViaPointContainer* via_points, const PoseSE2* follower_vel)
 {    
   initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel);
 }
@@ -69,7 +70,7 @@ TebOptimalPlanner::~TebOptimalPlanner()
 }
 
 void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, geometry_msgs::Twist* follower_vel)
+                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel)
 {    
   // init optimizer (set solver and block ordering settings)
   optimizer_ = initOptimizer();
@@ -190,7 +191,7 @@ bool TebOptimalPlanner::optimizeTEB(int iterations_innerloop, int iterations_out
   //                 however, we have not tested this mode intensively yet, so we keep
   //                 the legacy fast mode as default until we finish our tests.
   bool fast_mode = !cfg_->obstacles.include_dynamic_obstacles;
-  
+
   for(int i=0; i<iterations_outerloop; ++i)
   {
     if (cfg_->trajectory.teb_autosize)
@@ -333,6 +334,10 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   AddEdgesViaPoints();
   
   AddEdgesVelocity();
+
+  //! Additional objective for robot guide local planning
+  if (follower_locked_)
+    AddEdgesFollowerVelocity();
   
   AddEdgesAcceleration();
 
@@ -343,11 +348,7 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   else
     AddEdgesKinematicsCarlike(); // we have a carlike robot since the turning radius is bounded from below.
 
-    
   AddEdgesPreferRotDir();
-
-  //! Additional objective for robot guide local planning
-  AddEdgesFollowerVelocity();
     
   return true;  
 }
@@ -762,16 +763,6 @@ void TebOptimalPlanner::AddEdgesVelocity()
 
 void TebOptimalPlanner::AddEdgesFollowerVelocity()
 {
-  //! First, check the follower velocity is coming or not, if NULL must return or the process crash
-  //! Then, check the value of follower speed. The tracking system publish non-processed value at first few runs
-  if (follower_vel_ == NULL)
-    return;
-  else
-  {
-    if(follower_vel_->linear.x < 0.01)
-      return;
-  }
-
   int n = teb_.sizePoses();
   Eigen::Matrix<double,2,2> information;
   information(0,0) = cfg_->optim.weight_follower_vel_x;
@@ -779,7 +770,6 @@ void TebOptimalPlanner::AddEdgesFollowerVelocity()
   information(0,1) = 0.0;
   information(1,0) = 0.0;
 
-  ROS_INFO_STREAM(follower_vel_->linear.x << " " << follower_vel_->linear.y);
   for (int i=0; i < n - 1; ++i)
   {
     EdgeFollowerVelocity* follower_velocity_edge = new EdgeFollowerVelocity;

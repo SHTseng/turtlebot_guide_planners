@@ -46,9 +46,11 @@ HomotopyClassPlanner::HomotopyClassPlanner() : cfg_(NULL), obstacles_(NULL), via
 }
 
 HomotopyClassPlanner::HomotopyClassPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                           TebVisualizationPtr visual, const ViaPointContainer* via_points) : initial_plan_(NULL)
+                                           TebVisualizationPtr visual, const ViaPointContainer* via_points,
+                                           const PoseSE2* follower_vel) :
+  initial_plan_(NULL), follower_locked_(false), follower_vel_(new PoseSE2)
 {
-  initialize(cfg, obstacles, robot_model, visual, via_points);
+  initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel);
 }
 
 HomotopyClassPlanner::~HomotopyClassPlanner()
@@ -56,7 +58,7 @@ HomotopyClassPlanner::~HomotopyClassPlanner()
 }
 
 void HomotopyClassPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                      TebVisualizationPtr visual, const ViaPointContainer* via_points)
+                                      TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel)
 {
   cfg_ = &cfg;
   obstacles_ = obstacles;
@@ -67,6 +69,8 @@ void HomotopyClassPlanner::initialize(const TebConfig& cfg, ObstContainer* obsta
     graph_search_ = boost::shared_ptr<GraphSearchInterface>(new lrKeyPointGraph(*cfg_, this));
   else
     graph_search_ = boost::shared_ptr<GraphSearchInterface>(new ProbRoadmapGraph(*cfg_, this));
+
+  follower_vel_ = follower_vel;
 
   initialized_ = true;
 
@@ -110,6 +114,8 @@ bool HomotopyClassPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const
   // Update old TEBs with new start, goal and velocity
   updateAllTEBs(&start, &goal, start_vel);
 
+  if (follower_vel_ != NULL)
+    ROS_INFO_STREAM(follower_vel_->x());
   // Init new TEBs based on newly explored homotopy classes
   exploreEquivalenceClassesAndInitTebs(start, goal, cfg_->obstacles.min_obstacle_dist, start_vel);
   // update via-points if activated
@@ -347,7 +353,8 @@ void HomotopyClassPlanner::exploreEquivalenceClassesAndInitTebs(const PoseSE2& s
 
 TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const PoseSE2& start, const PoseSE2& goal, const geometry_msgs::Twist* start_velocity)
 {
-  TebOptimalPlannerPtr candidate =  TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_));
+  TebOptimalPlannerPtr candidate =  TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_,
+                                                                                TebVisualizationPtr(), NULL, follower_vel_));
 
   candidate->teb().initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
 
@@ -370,9 +377,12 @@ TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const PoseSE2& start
 
 TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const std::vector<geometry_msgs::PoseStamped>& initial_plan, const geometry_msgs::Twist* start_velocity)
 {
-  TebOptimalPlannerPtr candidate = TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_));
+  TebOptimalPlannerPtr candidate = TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_,
+                                                                               TebVisualizationPtr(), NULL, follower_vel_));
 
   candidate->teb().initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, true, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
+
+//  candidate->setTrackingState(follower_locked_);
 
   if (start_velocity)
     candidate->setVelocityStart(*start_velocity);
@@ -420,6 +430,7 @@ void HomotopyClassPlanner::optimizeAllTEBs(int iter_innerloop, int iter_outerloo
     boost::thread_group teb_threads;
     for (TebOptPlannerContainer::iterator it_teb = tebs_.begin(); it_teb != tebs_.end(); ++it_teb)
     {
+      it_teb->get()->setTrackingState(follower_locked_);
       teb_threads.create_thread( boost::bind(&TebOptimalPlanner::optimizeTEB, it_teb->get(), iter_innerloop, iter_outerloop,
                                              true, cfg_->hcp.selection_obst_cost_scale, cfg_->hcp.selection_viapoint_cost_scale,
                                              cfg_->hcp.selection_alternative_time_cost) );

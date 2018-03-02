@@ -66,17 +66,15 @@ public:
 
     const double omega = angle_diff / deltaT->estimate();
 
-    _error[0] = penaltyBoundToInterval(vel, follower_vel_.position().norm(), cfg_->optim.penalty_epsilon);
+    _error[0] = penaltyBoundToInterval(vel, follower_vel_.x(), cfg_->optim.penalty_epsilon);
     _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta, cfg_->optim.penalty_epsilon);
 
     ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeVelocity::computeError() _error[0]=%f _error[1]=%f\n",_error[0],_error[1]);
   }
 
-  void setFollowerVelocity(const geometry_msgs::Twist& follower_vel)
+  void setFollowerVelocity(const PoseSE2& follower_vel)
   {
-    follower_vel_.position() << follower_vel.linear.x, follower_vel.linear.y;
-    follower_vel_.theta() = follower_vel.angular.z;
-    ROS_INFO_STREAM(follower_vel.linear.x << " " << follower_vel.linear.y);
+    follower_vel_ = follower_vel;
   }
 
 protected:
