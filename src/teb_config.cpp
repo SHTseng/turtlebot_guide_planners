@@ -120,6 +120,9 @@ void TebConfig::loadRosParamFromNodeHandle(const ros::NodeHandle& nh)
   nh.param("weight_adapt_factor", optim.weight_adapt_factor, optim.weight_adapt_factor);
   nh.param("weight_follower_vel_x", optim.weight_follower_vel_x, optim.weight_follower_vel_x);
   nh.param("weight_follower_vel_theta", optim.weight_follower_vel_theta, optim.weight_follower_vel_theta);
+  nh.param("weight_following_range", optim.weight_following_range, optim.weight_following_range);
+  nh.param("weight_proxemics", optim.weight_proxemics, optim.weight_proxemics);
+  nh.param("enable_guide", optim.enable_guide, optim.enable_guide);
   
   // Homotopy Class Planner
   nh.param("enable_homotopy_class_planning", hcp.enable_homotopy_class_planning, hcp.enable_homotopy_class_planning); 

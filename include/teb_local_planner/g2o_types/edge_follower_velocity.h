@@ -62,12 +62,16 @@ public:
     double vel = dist / deltaT->estimate();
 
 //     vel *= g2o::sign(deltaS[0]*cos(conf1->theta()) + deltaS[1]*sin(conf1->theta())); // consider direction
-//    vel *= fast_sigmoid( 100 * (deltaS.x()*cos(conf1->theta()) + deltaS.y()*sin(conf1->theta())) ); // consider direction
+    // consider moving forward or backward
+    vel *= fast_sigmoid( 100 * (deltaS.x()*cos(conf1->theta()) + deltaS.y()*sin(conf1->theta())) );
 
     const double omega = angle_diff / deltaT->estimate();
-
-    _error[0] = penaltyBoundToInterval(vel, follower_vel_.x(), cfg_->optim.penalty_epsilon);
-    _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta, cfg_->optim.penalty_epsilon);
+    const double fvel = follower_vel_.position().norm();
+    const double ftheta = g2o::normalize_theta(follower_vel_.theta());
+    _error[0] = penaltyBoundToInterval(vel, fvel-0.01, fvel+0.01, cfg_->optim.penalty_epsilon);
+//    _error[0] = penaltyBoundToInterval(vel, follower_vel_.position().norm(), cfg_->optim.penalty_epsilon);
+    _error[1] = penaltyBoundToInterval(omega, ftheta-0.1, ftheta+0.1, cfg_->optim.penalty_epsilon);
+//    _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta, cfg_->optim.penalty_epsilon);
 
     ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeVelocity::computeError() _error[0]=%f _error[1]=%f\n",_error[0],_error[1]);
   }

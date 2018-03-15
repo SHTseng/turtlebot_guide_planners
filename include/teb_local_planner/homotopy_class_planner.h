@@ -125,7 +125,7 @@ public:
    */
   HomotopyClassPlanner(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
                        TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL,
-                       const PoseSE2* follower_vel = NULL);
+                       const PoseSE2* follower_vel = NULL, const PoseSE2* follower_pose_ = NULL);
 
   /**
    * @brief Destruct the HomotopyClassPlanner.
@@ -141,7 +141,8 @@ public:
    * @param via_points Container storing via-points (optional)
    */
   void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                  TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
+                  TebVisualizationPtr visualization = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL,
+                  const PoseSE2 *follower_pose = NULL);
 
 
 
@@ -516,6 +517,7 @@ protected:
   TebOptimalPlannerPtr best_teb_; //!< Store the current best teb.
   RobotFootprintModelPtr robot_model_; //!< Robot model shared instance
   const PoseSE2* follower_vel_;
+  const PoseSE2* follower_pose_;
 
   const std::vector<geometry_msgs::PoseStamped>* initial_plan_; //!< Store the initial plan if available for a better trajectory initialization
   EquivalenceClassPtr initial_plan_eq_class_; //!< Store the equivalence class of the initial plan

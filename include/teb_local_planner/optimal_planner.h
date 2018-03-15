@@ -69,6 +69,7 @@
 #include <teb_local_planner/g2o_types/edge_via_point.h>
 #include <teb_local_planner/g2o_types/edge_prefer_rotdir.h>
 #include <teb_local_planner/g2o_types/edge_follower_velocity.h>
+#include <teb_local_planner/g2o_types/edge_following_range.h>
 
 // messages
 #include <nav_msgs/Path.h>
@@ -126,7 +127,8 @@ public:
    * @param via_points Container storing via-points (optional)
    */
   TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                    TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
+                    TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL,
+                    const PoseSE2 *follower_pose = NULL);
   
   /**
    * @brief Destruct the optimal planner.
@@ -142,7 +144,8 @@ public:
     * @param via_points Container storing via-points (optional)
     */
   void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                  TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL);
+                  TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const PoseSE2* follower_vel = NULL,
+                  const PoseSE2 *follower_pose = NULL);
   
   
 
@@ -600,6 +603,16 @@ protected:
    * @see optimizeGraph
    */
   void AddEdgesFollowerVelocity();
+
+  /**
+   * @brief Add all edges (local cost functions) for constrain the follower locate inside following range.
+   * @see EdgeFollowerVelocity
+   * @see buildGraph
+   * @see optimizeGraph
+   */
+  void AddEdgesFollowingRange();
+
+  void AddEdgesProxemics();
   
   /**
    * @brief Add all edges (local cost functions) for limiting the translational and angular acceleration.
@@ -710,6 +723,7 @@ protected:
   std::pair<bool, geometry_msgs::Twist> vel_start_; //!< Store the initial velocity at the start pose
   std::pair<bool, geometry_msgs::Twist> vel_goal_; //!< Store the final velocity at the goal pose
   const PoseSE2* follower_vel_;
+  const PoseSE2* follower_pose_;
 
   bool initialized_; //!< Keeps track about the correct initialization of this class
   bool optimized_; //!< This variable is \c true as long as the last optimization has been completed successful

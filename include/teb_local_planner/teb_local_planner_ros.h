@@ -222,7 +222,7 @@ protected:
    * @brief Update internal via-point container based on the current reference plan
    * @remarks All previous via-points will be cleared.
    */
-  void updateFollowerVelocity();
+  void updateFollowerProfile();
   
   
   /**
@@ -389,6 +389,7 @@ private:
   ros::Subscriber tracked_people_sub_; //! Subscruber for the tracked people topic
   spencer_tracking_msgs::TrackedPersons tracked_persons_msg_; //! Follower velocity message
   boost::mutex tracked_person_mutex_; //! Mutex for locking the speed of the follower
+  PoseSE2 follower_pose_; //! Container for storing the pose of the follower
   PoseSE2 follower_vel_; //! Container for storing the se2 velocity of the follower and pass as reference to optimal planner
   bool follower_tracked_;
   

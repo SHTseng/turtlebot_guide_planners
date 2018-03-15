@@ -47,10 +47,10 @@ HomotopyClassPlanner::HomotopyClassPlanner() : cfg_(NULL), obstacles_(NULL), via
 
 HomotopyClassPlanner::HomotopyClassPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
                                            TebVisualizationPtr visual, const ViaPointContainer* via_points,
-                                           const PoseSE2* follower_vel) :
-  initial_plan_(NULL), follower_locked_(false), follower_vel_(new PoseSE2)
+                                           const PoseSE2* follower_vel, const PoseSE2 *follower_pose_) :
+  initial_plan_(NULL), follower_locked_(false), follower_vel_(new PoseSE2), follower_pose_(new PoseSE2)
 {
-  initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel);
+  initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel, follower_pose_);
 }
 
 HomotopyClassPlanner::~HomotopyClassPlanner()
@@ -58,7 +58,8 @@ HomotopyClassPlanner::~HomotopyClassPlanner()
 }
 
 void HomotopyClassPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                      TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel)
+                                      TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel,
+                                      const PoseSE2* follower_pose)
 {
   cfg_ = &cfg;
   obstacles_ = obstacles;
@@ -114,8 +115,9 @@ bool HomotopyClassPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const
   // Update old TEBs with new start, goal and velocity
   updateAllTEBs(&start, &goal, start_vel);
 
-  if (follower_vel_ != NULL)
-    ROS_INFO_STREAM(follower_vel_->x());
+//  if (follower_vel_ != NULL)
+//    ROS_INFO_STREAM(follower_vel_->x());
+
   // Init new TEBs based on newly explored homotopy classes
   exploreEquivalenceClassesAndInitTebs(start, goal, cfg_->obstacles.min_obstacle_dist, start_vel);
   // update via-points if activated
@@ -354,7 +356,7 @@ void HomotopyClassPlanner::exploreEquivalenceClassesAndInitTebs(const PoseSE2& s
 TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const PoseSE2& start, const PoseSE2& goal, const geometry_msgs::Twist* start_velocity)
 {
   TebOptimalPlannerPtr candidate =  TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_,
-                                                                                TebVisualizationPtr(), NULL, follower_vel_));
+                                                                                TebVisualizationPtr(), NULL, follower_vel_, follower_pose_));
 
   candidate->teb().initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
 
@@ -378,7 +380,7 @@ TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const PoseSE2& start
 TebOptimalPlannerPtr HomotopyClassPlanner::addAndInitNewTeb(const std::vector<geometry_msgs::PoseStamped>& initial_plan, const geometry_msgs::Twist* start_velocity)
 {
   TebOptimalPlannerPtr candidate = TebOptimalPlannerPtr( new TebOptimalPlanner(*cfg_, obstacles_, robot_model_,
-                                                                               TebVisualizationPtr(), NULL, follower_vel_));
+                                                                               TebVisualizationPtr(), NULL, follower_vel_, follower_pose_));
 
   candidate->teb().initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, true, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
 

@@ -48,15 +48,15 @@ namespace teb_local_planner
 
 TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
                                          robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false),
-                                         follower_vel_(new PoseSE2()), follower_locked_(false)
+                                         follower_vel_(new PoseSE2()), follower_pose_(new PoseSE2()), follower_locked_(false)
 {    
 }
   
 TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles,
                                      RobotFootprintModelPtr robot_model, TebVisualizationPtr visual,
-                                     const ViaPointContainer* via_points, const PoseSE2* follower_vel)
+                                     const ViaPointContainer* via_points, const PoseSE2* follower_vel, const PoseSE2* follower_pose)
 {    
-  initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel);
+  initialize(cfg, obstacles, robot_model, visual, via_points, follower_vel, follower_pose);
 }
 
 TebOptimalPlanner::~TebOptimalPlanner()
@@ -70,7 +70,8 @@ TebOptimalPlanner::~TebOptimalPlanner()
 }
 
 void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model,
-                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel)
+                                   TebVisualizationPtr visual, const ViaPointContainer* via_points, const PoseSE2* follower_vel,
+                                   const PoseSE2* follower_pose)
 {    
   // init optimizer (set solver and block ordering settings)
   optimizer_ = initOptimizer();
@@ -92,6 +93,7 @@ void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacle
   vel_goal_.second.linear.y = 0;
   vel_goal_.second.angular.z = 0;
 
+  follower_pose_ = follower_pose;
   follower_vel_ = follower_vel;
 
   initialized_ = true;
@@ -336,8 +338,11 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   AddEdgesVelocity();
 
   //! Additional objective for robot guide local planning
-  if (follower_locked_)
+  if (cfg_->optim.enable_guide && follower_locked_)
+  {
     AddEdgesFollowerVelocity();
+    AddEdgesFollowingRange();
+  }
   
   AddEdgesAcceleration();
 
@@ -781,6 +786,40 @@ void TebOptimalPlanner::AddEdgesFollowerVelocity()
     follower_velocity_edge->setFollowerVelocity(*follower_vel_);
     optimizer_->addEdge(follower_velocity_edge);
   }
+}
+
+void TebOptimalPlanner::AddEdgesFollowingRange()
+{
+  int n = teb_.sizePoses();
+
+//  Eigen::Matrix<double,2,2> information;
+//  information(0,0) = cfg_->optim.weight_follower_vel_x;
+//  information(1,1) = cfg_->optim.weight_follower_vel_theta;
+//  information(0,1) = 0.0;
+//  information(1,0) = 0.0;
+  int index = teb_.findClosestTrajectoryPose(follower_pose_->position(), NULL);
+
+  Eigen::Matrix<double,1,1> information;
+  information.fill(cfg_->optim.weight_following_range);
+
+  Eigen::Vector2d* p = new Eigen::Vector2d(follower_pose_->position());
+  EdgeFollowingRange* edge_following_range = new EdgeFollowingRange;
+  edge_following_range->setVertex(0, teb_.PoseVertex(index));
+  edge_following_range->setInformation(information);
+  edge_following_range->setTebConfig(*cfg_);
+
+  edge_following_range->setFollowerPose(p);
+  optimizer_->addEdge(edge_following_range);
+//  for (int i = 0; i < n; i++)
+//  {
+//    EdgeFollowingRange* edge_following_range = new EdgeFollowingRange;
+//    edge_following_range->setVertex(0, teb_.PoseVertex(i));
+//    edge_following_range->setInformation(information);
+//    edge_following_range->setTebConfig(*cfg_);
+
+//    edge_following_range->setFollowerPose(p);
+//    optimizer_->addEdge(edge_following_range);
+//  }
 }
 
 void TebOptimalPlanner::AddEdgesAcceleration()

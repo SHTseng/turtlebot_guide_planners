@@ -102,13 +102,13 @@ void TebLocalPlannerROS::initialize(std::string name, tf::TransformListener* tf,
     if (cfg_.hcp.enable_homotopy_class_planning)
     {
       planner_ = PlannerInterfacePtr(new HomotopyClassPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_,
-                                                              &follower_vel_));
+                                                              &follower_vel_, &follower_pose_));
       ROS_INFO("Parallel planning in distinctive topologies enabled.");
     }
     else
     {
       planner_ = PlannerInterfacePtr(new TebOptimalPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_,
-                                                           &follower_vel_));
+                                                           &follower_vel_, &follower_pose_));
       ROS_INFO("Parallel planning in distinctive topologies disabled.");
     }
     
@@ -317,7 +317,7 @@ bool TebLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   updateViaPointsContainer(transformed_plan, cfg_.trajectory.global_plan_viapoint_sep);
 
   // update the information of the follower
-  updateFollowerVelocity();
+  updateFollowerProfile();
     
   // Do not allow config changes during the following optimization step
   boost::mutex::scoped_lock cfg_lock(cfg_.configMutex());
@@ -586,16 +586,27 @@ void TebLocalPlannerROS::updateViaPointsContainer(const std::vector<geometry_msg
   }
 }
 
-void TebLocalPlannerROS::updateFollowerVelocity()
+void TebLocalPlannerROS::updateFollowerProfile()
 {
   boost::mutex::scoped_lock l(tracked_person_mutex_);
   for ( auto it  = tracked_persons_msg_.tracks.begin(); it != tracked_persons_msg_.tracks.end(); it++)
   {
+    follower_tracked_ = false;
     if (it->track_id == 0)
     {
+      follower_pose_.position().coeffRef(0) = it->pose.pose.position.x;
+      follower_pose_.position().coeffRef(1) = it->pose.pose.position.y;
+      tf::Quaternion q(it->pose.pose.orientation.x, it->pose.pose.orientation.y,
+                       it->pose.pose.orientation.z, it->pose.pose.orientation.w);
+      tf::Matrix3x3 m(q);
+      double roll, pitch, yaw;
+      m.getRPY(roll, pitch, yaw);
+      follower_pose_.theta() = yaw;
+
       follower_vel_.position().coeffRef(0) = it->twist.twist.linear.x;
       follower_vel_.position().coeffRef(1) = it->twist.twist.linear.y;
-      follower_vel_.theta() = it->twist.twist.angular.z;
+      follower_vel_.theta() = std::atan2(it->twist.twist.linear.y, it->twist.twist.linear.x);
+//      follower_vel_.theta() = it->twist.twist.angular.z;
       follower_tracked_ = true;
       break;
     }
