@@ -269,7 +269,7 @@ bool TebOptimalPlanner::plan(const std::vector<geometry_msgs::PoseStamped>& init
     setVelocityGoalFree();
   else
     vel_goal_.first = true; // we just reactivate and use the previously set velocity (should be zero if nothing was modified)
-  
+
   // now optimize
   return optimizeTEB(cfg_->optim.no_inner_iterations, cfg_->optim.no_outer_iterations);
 }
@@ -307,7 +307,7 @@ bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const ge
     setVelocityGoalFree();
   else
     vel_goal_.first = true; // we just reactivate and use the previously set velocity (should be zero if nothing was modified)
-      
+
   // now optimize
   return optimizeTEB(cfg_->optim.no_inner_iterations, cfg_->optim.no_outer_iterations);
 }
@@ -340,13 +340,14 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   //! Additional objective for robot guide local planning
   if (cfg_->optim.enable_guide && follower_locked_)
   {
+//    ROS_INFO_STREAM(follower_vel_->position().x() << " " << follower_vel_->position().y());
     AddEdgesFollowerVelocity();
     AddEdgesFollowingRange();
   }
   
   AddEdgesAcceleration();
 
-  AddEdgesTimeOptimal();	
+  AddEdgesTimeOptimal();
   
   if (cfg_->robot.min_turning_radius == 0 || cfg_->optim.weight_kinematics_turning_radius == 0)
     AddEdgesKinematicsDiffDrive(); // we have a differential drive robot
@@ -768,6 +769,9 @@ void TebOptimalPlanner::AddEdgesVelocity()
 
 void TebOptimalPlanner::AddEdgesFollowerVelocity()
 {
+  if (cfg_->optim.weight_follower_vel_x == 0 || cfg_->optim.weight_follower_vel_theta == 0)
+    return;
+
   int n = teb_.sizePoses();
   Eigen::Matrix<double,2,2> information;
   information(0,0) = cfg_->optim.weight_follower_vel_x;
@@ -775,6 +779,7 @@ void TebOptimalPlanner::AddEdgesFollowerVelocity()
   information(0,1) = 0.0;
   information(1,0) = 0.0;
 
+//  ROS_INFO_STREAM("TEB pose: " << teb_.PoseVertex(0)->position().x() << " " << teb_.PoseVertex(0)->position().y());
   for (int i=0; i < n - 1; ++i)
   {
     EdgeFollowerVelocity* follower_velocity_edge = new EdgeFollowerVelocity;
@@ -790,36 +795,39 @@ void TebOptimalPlanner::AddEdgesFollowerVelocity()
 
 void TebOptimalPlanner::AddEdgesFollowingRange()
 {
-  int n = teb_.sizePoses();
+  if (cfg_->optim.weight_follower_pose_x == 0 || cfg_->optim.weight_follower_pose_y == 0)
+    return;
 
-//  Eigen::Matrix<double,2,2> information;
-//  information(0,0) = cfg_->optim.weight_follower_vel_x;
-//  information(1,1) = cfg_->optim.weight_follower_vel_theta;
-//  information(0,1) = 0.0;
-//  information(1,0) = 0.0;
-  int index = teb_.findClosestTrajectoryPose(follower_pose_->position(), NULL);
+  Eigen::Matrix<double,2,2> information;
+  information(0,0) = cfg_->optim.weight_follower_pose_x;
+  information(1,1) = cfg_->optim.weight_follower_pose_y;
+  information(0,1) = 0.0;
+  information(1,0) = 0.0;
 
-  Eigen::Matrix<double,1,1> information;
-  information.fill(cfg_->optim.weight_following_range);
+  double time = teb_.TimeDiff(0);
+  for (int i=1; i < teb_.sizePoses()-1; ++i)
+  {
+    EdgeFollowingRange* edge_following_range = new EdgeFollowingRange(teb_.getSumOfTimeDiffsUpToIdx(i));
+    edge_following_range->setVertex(0,teb_.PoseVertex(i));
+    edge_following_range->setInformation(information);
+    edge_following_range->setFollowerVel(follower_vel_);
+    edge_following_range->setParameters(*cfg_, robot_model_.get(), follower_pose_);
+    optimizer_->addEdge(edge_following_range);
+//    if ( i != (teb_.sizePoses() - 1))
+    time += teb_.TimeDiff(i); // we do not need to check the time diff bounds, since we iterate to "< sizePoses()-1".
+  }
 
-  Eigen::Vector2d* p = new Eigen::Vector2d(follower_pose_->position());
-  EdgeFollowingRange* edge_following_range = new EdgeFollowingRange;
-  edge_following_range->setVertex(0, teb_.PoseVertex(index));
-  edge_following_range->setInformation(information);
-  edge_following_range->setTebConfig(*cfg_);
+//  int index = teb_.findClosestTrajectoryPose(follower_pose_->position(), NULL);
 
-  edge_following_range->setFollowerPose(p);
-  optimizer_->addEdge(edge_following_range);
-//  for (int i = 0; i < n; i++)
-//  {
-//    EdgeFollowingRange* edge_following_range = new EdgeFollowingRange;
-//    edge_following_range->setVertex(0, teb_.PoseVertex(i));
-//    edge_following_range->setInformation(information);
-//    edge_following_range->setTebConfig(*cfg_);
 
-//    edge_following_range->setFollowerPose(p);
-//    optimizer_->addEdge(edge_following_range);
-//  }
+//  Eigen::Vector2d* p = new Eigen::Vector2d(follower_pose_->position());
+//  EdgeFollowingRange* edge_following_range = new EdgeFollowingRange;
+//  edge_following_range->setVertex(0, teb_.PoseVertex(index));
+//  edge_following_range->setInformation(information);
+//  edge_following_range->setTebConfig(*cfg_);
+
+//  edge_following_range->setFollowerPose(p);
+//  optimizer_->addEdge(edge_following_range);
 }
 
 void TebOptimalPlanner::AddEdgesAcceleration()

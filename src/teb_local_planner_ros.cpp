@@ -592,6 +592,7 @@ void TebLocalPlannerROS::updateFollowerProfile()
   for ( auto it  = tracked_persons_msg_.tracks.begin(); it != tracked_persons_msg_.tracks.end(); it++)
   {
     follower_tracked_ = false;
+//    if (it->track_id == 0 && !it->is_occluded && it->is_matched)
     if (it->track_id == 0)
     {
       follower_pose_.position().coeffRef(0) = it->pose.pose.position.x;
@@ -602,6 +603,9 @@ void TebLocalPlannerROS::updateFollowerProfile()
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);
       follower_pose_.theta() = yaw;
+
+//      ROS_INFO_STREAM(follower_pose_.position().coeffRef(0) << " " << follower_pose_.position().coeffRef(1) << " " <<
+//                      follower_pose_.theta()*180.0/M_PI);
 
       follower_vel_.position().coeffRef(0) = it->twist.twist.linear.x;
       follower_vel_.position().coeffRef(1) = it->twist.twist.linear.y;

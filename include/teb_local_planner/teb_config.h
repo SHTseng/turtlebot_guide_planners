@@ -68,7 +68,7 @@ public:
   //! Trajectory related parameters
   struct Trajectory
   {
-    double teb_autosize; //!< Enable automatic resizing of the trajectory w.r.t to the temporal resolution (recommended)
+    bool teb_autosize; //!< Enable automatic resizing of the trajectory w.r.t to the temporal resolution (recommended)
     double dt_ref; //!< Desired temporal resolution of the trajectory (should be in the magniture of the underlying control rate)
     double dt_hysteresis; //!< Hysteresis for automatic resizing depending on the current temporal resolution (dt): usually 10% of dt_ref
     int min_samples; //!< Minimum number of samples (should be always greater than 2)
@@ -158,7 +158,8 @@ public:
 
     double weight_follower_vel_x; //!< Optimization weight for adapting to the follower translation velocity in x
     double weight_follower_vel_theta; //!< Optimization weight for adapting to the follower rotation yaw
-    double weight_following_range;
+    double weight_follower_pose_x;
+    double weight_follower_pose_y;
     double weight_proxemics;
     bool enable_guide; //! Switch for the robot guide mode
   } optim; //!< Optimization related parameters
@@ -302,7 +303,8 @@ public:
     optim.weight_adapt_factor = 2.0;
     optim.weight_follower_vel_x = 3;
     optim.weight_follower_vel_theta = 2;
-    optim.weight_following_range = 1;
+    optim.weight_follower_pose_x = 1;
+    optim.weight_follower_pose_y = 1;
     optim.weight_proxemics = 1;
     optim.enable_guide = false;
     

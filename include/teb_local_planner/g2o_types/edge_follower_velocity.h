@@ -68,9 +68,9 @@ public:
     const double omega = angle_diff / deltaT->estimate();
     const double fvel = follower_vel_.position().norm();
     const double ftheta = g2o::normalize_theta(follower_vel_.theta());
-    _error[0] = penaltyBoundToInterval(vel, fvel-0.01, fvel+0.01, cfg_->optim.penalty_epsilon);
-//    _error[0] = penaltyBoundToInterval(vel, follower_vel_.position().norm(), cfg_->optim.penalty_epsilon);
-    _error[1] = penaltyBoundToInterval(omega, ftheta-0.1, ftheta+0.1, cfg_->optim.penalty_epsilon);
+    _error[0] = penaltyBoundToInterval(vel, fvel-0.05, fvel+0.05, cfg_->optim.penalty_epsilon);
+//    _error[0] = penaltyBoundToInterval(vel, fvel, cfg_->optim.penalty_epsilon);
+    _error[1] = penaltyBoundToInterval(omega, ftheta-0.2, ftheta+0.2, cfg_->optim.penalty_epsilon);
 //    _error[1] = penaltyBoundToInterval(omega, cfg_->robot.max_vel_theta, cfg_->optim.penalty_epsilon);
 
     ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeVelocity::computeError() _error[0]=%f _error[1]=%f\n",_error[0],_error[1]);

@@ -118,9 +118,10 @@ void TebConfig::loadRosParamFromNodeHandle(const ros::NodeHandle& nh)
   nh.param("weight_viapoint", optim.weight_viapoint, optim.weight_viapoint);
   nh.param("weight_prefer_rotdir", optim.weight_prefer_rotdir, optim.weight_prefer_rotdir);
   nh.param("weight_adapt_factor", optim.weight_adapt_factor, optim.weight_adapt_factor);
+  nh.param("weight_follower_pose_x", optim.weight_follower_pose_x, optim.weight_follower_pose_x);
+  nh.param("weight_follower_pose_y", optim.weight_follower_pose_y, optim.weight_follower_pose_y);
   nh.param("weight_follower_vel_x", optim.weight_follower_vel_x, optim.weight_follower_vel_x);
   nh.param("weight_follower_vel_theta", optim.weight_follower_vel_theta, optim.weight_follower_vel_theta);
-  nh.param("weight_following_range", optim.weight_following_range, optim.weight_following_range);
   nh.param("weight_proxemics", optim.weight_proxemics, optim.weight_proxemics);
   nh.param("enable_guide", optim.enable_guide, optim.enable_guide);
   

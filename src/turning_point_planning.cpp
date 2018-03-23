@@ -1,41 +1,3 @@
-/*********************************************************************
- *
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2017.
- *  TU Dortmund - Institute of Control Theory and Systems Engineering.
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   * Neither the name of the institute nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- *
- * Author: Christoph Rösmann
- *********************************************************************/
-
 #include <teb_local_planner/teb_local_planner_ros.h>
 
 #include <interactive_markers/interactive_marker_server.h>
@@ -77,84 +39,84 @@ int main( int argc, char** argv )
 {
   ros::init(argc, argv, "test_optim_node");
   ros::NodeHandle n("~");
- 
-  
+
+
   // load ros parameters from node handle
   config.loadRosParamFromNodeHandle(n);
- 
+
   ros::Timer cycle_timer = n.createTimer(ros::Duration(0.025), CB_mainCycle); //0.025
   ros::Timer publish_timer = n.createTimer(ros::Duration(0.1), CB_publishCycle);
-  
+
   // setup dynamic reconfigure
 //  dynamic_recfg = boost::make_shared< dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig> >(n);
 //  dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig>::CallbackType cb = boost::bind(CB_reconfigure, _1, _2);
 //  dynamic_recfg->setCallback(cb);
-  
+
   // setup callback for custom obstacles
   custom_obst_sub = n.subscribe("obstacles", 1, CB_customObstacle);
-  
+
   // setup callback for clicked points (in rviz) that are considered as via-points
-//  clicked_points_sub = n.subscribe("/clicked_point", 5, CB_clicked_points);
-  
+  clicked_points_sub = n.subscribe("/clicked_point", 5, CB_clicked_points);
+
   // interactive marker server for simulated dynamic obstacles
   interactive_markers::InteractiveMarkerServer marker_server("marker_obstacles");
 
-  obst_vector.push_back( boost::make_shared<PointObstacle>(-3,1) );
-  obst_vector.push_back( boost::make_shared<PointObstacle>(6,2) );
-  obst_vector.push_back( boost::make_shared<PointObstacle>(0,0.1) );
+//  obst_vector.push_back( boost::make_shared<PointObstacle>(0,0.5) );
+//  obst_vector.push_back( boost::make_shared<PointObstacle>(0,2.0) );
+//  obst_vector.push_back( boost::make_shared<PointObstacle>(0,4.0) );
 //  obst_vector.push_back( boost::make_shared<LineObstacle>(1,1.5,1,-1.5) ); //90 deg
 //  obst_vector.push_back( boost::make_shared<LineObstacle>(1,0,-1,0) ); //180 deg
 //  obst_vector.push_back( boost::make_shared<PointObstacle>(-1.5,-0.5) );
 
   // Dynamic obstacles
-  Eigen::Vector2d vel (0.1, -0.3);
-  obst_vector.at(0)->setCentroidVelocity(vel);
-  vel = Eigen::Vector2d(-0.3, -0.2);
-  obst_vector.at(1)->setCentroidVelocity(vel);
+//  Eigen::Vector2d vel (0.1, -0.3);
+//  obst_vector.at(0)->setCentroidVelocity(vel);
+//  vel = Eigen::Vector2d(-0.3, -0.2);
+//  obst_vector.at(1)->setCentroidVelocity(vel);
 
-  /*
+
   PolygonObstacle* polyobst = new PolygonObstacle;
-  polyobst->pushBackVertex(1, -1);
-  polyobst->pushBackVertex(0, 1);
-  polyobst->pushBackVertex(1, 1);
-  polyobst->pushBackVertex(2, 1);
- 
+  polyobst->pushBackVertex(0.5, 0.0);
+  polyobst->pushBackVertex(6.0, 0.0);
+  polyobst->pushBackVertex(6.0, -0.5);
+  polyobst->pushBackVertex(0.5, -0.5);
+
   polyobst->finalizePolygon();
   obst_vector.emplace_back(polyobst);
-  */
-  
+
+
   for (unsigned int i=0; i<obst_vector.size(); ++i)
   {
     // setup callbacks for setting obstacle velocities
     std::string topic = "/test_optim_node/obstacle_" + std::to_string(i) + "/cmd_vel";
     obst_vel_subs.push_back(n.subscribe<geometry_msgs::Twist>(topic, 1, boost::bind(&CB_setObstacleVelocity, _1, i)));
 
-    //CreateInteractiveMarker(obst_vector.at(i)[0],obst_vector.at(i)[1],i,&marker_server, &CB_obstacle_marker);  
+    //CreateInteractiveMarker(obst_vector.at(i)[0],obst_vector.at(i)[1],i,&marker_server, &CB_obstacle_marker);
     // Add interactive markers for all point obstacles
     boost::shared_ptr<PointObstacle> pobst = boost::dynamic_pointer_cast<PointObstacle>(obst_vector.at(i));
     if (pobst)
     {
-      CreateInteractiveMarker(pobst->x(),pobst->y(),i, config.map_frame, &marker_server, &CB_obstacle_marker);  
+      CreateInteractiveMarker(pobst->x(),pobst->y(),i, config.map_frame, &marker_server, &CB_obstacle_marker);
     }
   }
   marker_server.applyChanges();
-  
-  
+
+
   // Add via points
   //via_points.push_back( Eigen::Vector2d( 0.0, 1.5 ) );
-  
+
   // Setup visualization
   visual = TebVisualizationPtr(new TebVisualization(n, config));
   visual_obs = TebVisualizationPtr(new TebVisualization(n, config));
   // Setup robot shape model
   RobotFootprintModelPtr robot_model = TebLocalPlannerROS::getRobotFootprintFromParamServer(n);
-  
+
   // Setup planner (homotopy class planning or just the local teb planner)
   if (config.hcp.enable_homotopy_class_planning)
     planner = PlannerInterfacePtr(new HomotopyClassPlanner(config, &obst_vector, robot_model, visual, &via_points));
   else
     planner = PlannerInterfacePtr(new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points));
-  
+
 
   no_fixed_obstacles = obst_vector.size();
   ros::spin();
@@ -165,7 +127,7 @@ int main( int argc, char** argv )
 // Planning loop
 void CB_mainCycle(const ros::TimerEvent& e)
 {
-  planner->plan(PoseSE2(-4,0,0), PoseSE2(4,0,0)); // hardcoded start and goal for testing purposes
+  planner->plan(PoseSE2(0,-4, 1.57), PoseSE2(4,1,0)); // hardcoded start and goal for testing purposes
 }
 
 // Visualization loop
@@ -242,19 +204,19 @@ void CB_obstacle_marker(const visualization_msgs::InteractiveMarkerFeedbackConst
   std::stringstream ss(feedback->marker_name);
   unsigned int index;
   ss >> index;
-  
-  if (index>=no_fixed_obstacles) 
+
+  if (index>=no_fixed_obstacles)
     return;
   PointObstacle* pobst = static_cast<PointObstacle*>(obst_vector.at(index).get());
-  pobst->position() = Eigen::Vector2d(feedback->pose.position.x,feedback->pose.position.y);	  
+  pobst->position() = Eigen::Vector2d(feedback->pose.position.x,feedback->pose.position.y);
 }
 
 void CB_customObstacle(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst_msg)
 {
   // resize such that the vector contains only the fixed obstacles specified inside the main function
   obst_vector.resize(no_fixed_obstacles);
-  
-  // Add custom obstacles obtained via message (assume that all obstacles coordiantes are specified in the default planning frame)  
+
+  // Add custom obstacles obtained via message (assume that all obstacles coordiantes are specified in the default planning frame)
   for (size_t i = 0; i < obst_msg->obstacles.size(); ++i)
   {
     if (obst_msg->obstacles.at(i).polygon.points.size() == 1 )

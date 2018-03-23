@@ -215,6 +215,15 @@ target_link_libraries(test_optim_node
    ${catkin_LIBRARIES}
 )
 
+add_executable(turning_point_planning src/turning_point_planning.cpp)
+
+target_link_libraries(turning_point_planning
+   teb_local_planner
+   ${EXTERNAL_LIBS}
+   ${catkin_LIBRARIES}
+)
+
+
 
 #############
 ## Install ##
