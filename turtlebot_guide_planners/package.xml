@@ -1,0 +1,17 @@
+<package>
+  <name>turtlebot_guide_planners</name>
+  <version>0.0.0</version>
+  <description>metapackage of turtlebot_guide_planners</description>
+  <maintainer email="q253upng@gmail.com">Shih Hung Tseng</maintainer>
+  
+  <license>TODO</license>
+  
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>global_planner</run_depend>
+  <run_depend>teb_local_planner</run_depend>
+
+  <export>
+    <metapackage/> 
+  </export>
+</package>
