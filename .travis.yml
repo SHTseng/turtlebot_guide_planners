@@ -13,11 +13,11 @@ notifications:
       - r03921064@ntu.edu.tw
 env:
   matrix:
-    - USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu  UPSTREAM_WORKSPACE=planners.rosinstall
-    - USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu UPSTREAM_WORKSPACE=planners.rosinstall
+    - ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu  UPSTREAM_WORKSPACE=planners.rosinstall
+    - ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu UPSTREAM_WORKSPACE=planners.rosinstall
 matrix:
   allow_failures:
-    - env: USE_DEB=true  ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu UPSTREAM_WORKSPACE=planners.rosinstall
+    - env: ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu UPSTREAM_WORKSPACE=planners.rosinstall
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: 
