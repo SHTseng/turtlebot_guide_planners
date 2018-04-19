@@ -1,4 +1,1 @@
-- git:
-    local-name: spencer_messages
-    uri: https://github.com/spencer-project/spencer_messages.git
-version: master
+- git: {local-name: spencer_messages, uri: https://github.com/spencer-project/spencer_messages.git, version: master}
