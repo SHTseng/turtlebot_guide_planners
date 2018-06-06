@@ -342,7 +342,7 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   {
 //    ROS_INFO_STREAM(follower_vel_->position().x() << " " << follower_vel_->position().y());
     AddEdgesFollowerVelocity();
-    AddEdgesFollowingRange();
+    // AddEdgesFollowingRange();
   }
   
   AddEdgesAcceleration();

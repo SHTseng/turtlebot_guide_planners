@@ -144,6 +144,7 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap,
         private_nh.param("planner_window_y", planner_window_y_, 0.0);
         private_nh.param("default_tolerance", default_tolerance_, 0.0);
         private_nh.param("publish_scale", publish_scale_, 100);
+        private_nh.param("rdp_tolerance", rdp_tolerance_, 0.15);
 
         double costmap_pub_freq;
         private_nh.param("planner_costmap_publish_frequency", costmap_pub_freq, 0.0);
@@ -316,7 +317,7 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
         }
 
         // Find turning point
-        std::vector<geometry_msgs::PoseStamped> simplified_path = rdp(plan, 0.15);
+        std::vector<geometry_msgs::PoseStamped> simplified_path = rdp(plan, rdp_tolerance_);
         for (int i = 0; i < simplified_path.size()-2; i++){
           geometry_msgs::PoseStamped v1, v2;
           v1.pose.position.x = simplified_path[i].pose.position.x-simplified_path[i+1].pose.position.x;
@@ -457,6 +458,11 @@ void GlobalPlanner::publishPotential(float* potential)
     potential_pub_.publish(grid);
 }
 
+std::vector<geometry_msgs::PoseStamped> GlobalPlanner::retrieveTurningPoints()
+{
+  return turning_points;
+}
+
 void GlobalPlanner::publishTurningPoint()
 {
   if (turning_points.size() == 0){
@@ -529,7 +535,6 @@ double GlobalPlanner::angle_diff(const geometry_msgs::PoseStamped v1, const geom
   double deno = std::sqrt((v1.pose.position.x*v1.pose.position.x+v1.pose.position.y*v1.pose.position.y))*
       std::sqrt((v2.pose.position.x*v2.pose.position.x+v2.pose.position.y*v2.pose.position.y));
   double n = frac/deno;
-  // std::cout << frac << " " << deno << "\n";
   return std::acos(n);
 }
 

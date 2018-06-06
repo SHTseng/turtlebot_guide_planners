@@ -164,6 +164,8 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
         void publishPlan(const std::vector<geometry_msgs::PoseStamped>& path);
 
         bool makePlanService(nav_msgs::GetPlan::Request& req, nav_msgs::GetPlan::Response& resp);
+        
+        std::vector<geometry_msgs::PoseStamped> retrieveTurningPoints();
 
     protected:
 
@@ -181,13 +183,11 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
         void clearRobotCell(const tf::Stamped<tf::Pose>& global_pose, unsigned int mx, unsigned int my);
         void publishPotential(float* potential);
 
-        // Find turning point
+        // Turning point
         std::vector<geometry_msgs::PoseStamped> rdp(const std::vector<geometry_msgs::PoseStamped> traj, const double epsilon);
         double point2line_dist(const geometry_msgs::PoseStamped point, const geometry_msgs::PoseStamped start, const geometry_msgs::PoseStamped end);
         double angle_diff(const geometry_msgs::PoseStamped v1, const geometry_msgs::PoseStamped v2);
         void publishTurningPoint(); //! For visualization
-        ros::Publisher turning_pub_;
-        std::vector<geometry_msgs::PoseStamped> turning_points;
 
         double planner_window_x_, planner_window_y_, default_tolerance_;
         std::string tf_prefix_;
@@ -207,6 +207,10 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
         unsigned char* cost_array_;
         float* potential_array_;
         unsigned int start_x_, start_y_, end_x_, end_y_;
+        
+        ros::Publisher turning_pub_;
+        std::vector<geometry_msgs::PoseStamped> turning_points;
+        double rdp_tolerance_;
 
         bool old_navfn_behavior_;
         float convert_offset_;
